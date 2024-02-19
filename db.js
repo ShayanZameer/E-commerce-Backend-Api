@@ -8,7 +8,6 @@ const mongoURI =
 const connectToMongo = () => {
   try {
     mongoose.connect(mongoURI, {
-      // useNewUrlParser: true,
       family: 4,
     });
 
@@ -19,5 +18,4 @@ const connectToMongo = () => {
     console.error(err);
   }
 };
-
 module.exports = connectToMongo;

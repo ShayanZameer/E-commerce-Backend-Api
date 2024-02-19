@@ -38,7 +38,9 @@ app.get("/", (req, res) => {
 });
 
 app.get("/developer", (req, res) => {
-  res.send("Shayan Zameer ");
+  res.send(
+    "Shayan Zameer (MERN STACK DEVELOPER) from Comsats University Islamabad "
+  );
 });
 
 const server = app.listen(port, () => {
