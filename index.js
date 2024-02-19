@@ -33,6 +33,14 @@ app.use("/api/Order", require("./routes/Order"));
 app.use("/api/shippingAddress", require("./routes/shippingAddress"));
 app.use("/api/Review", require("./routes/Reviews"));
 
+app.get("/", (req, res) => {
+  res.send("Backend Api is working Fine ");
+});
+
+app.get("/developer", (req, res) => {
+  res.send("Shayan Zameer ");
+});
+
 const server = app.listen(port, () => {
   console.log(`Ecommerce backend app listening at http://localhost:${port}`);
 });
