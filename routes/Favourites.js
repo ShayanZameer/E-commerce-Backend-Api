@@ -11,6 +11,7 @@ const Product = require("../models/Product");
 
 const router = express.Router();
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
 const fetchuser = require("../middleware/fetchuser");
 
@@ -59,37 +60,46 @@ const fetchuser = require("../middleware/fetchuser");
 
 router.post("/addToFavorites/:productId", fetchuser, async (req, res) => {
   try {
+    console.log("User information:", req.user);
     const userId = req.user.id;
-
-    console.log(userId);
     const productId = req.params.productId;
 
-    const product = await Product.findById(productId);
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+    // Ensure that userId is valid
+    if (!userId) {
+      return res.status(500).json({ message: "User information is missing" });
     }
 
-    // Ensure that req.user is defined and has the favorites array
-    if (!req.user || !req.user.favorites) {
+    // Find the user by ID
+    const user = await User.findById(userId);
+
+    // Ensure that user is found and has the favorites array
+    if (!user || !user.favorites) {
+      console.log("HELLO WORLD");
+      console.log("User information:", user);
+      console.log(user.favorites);
       return res.status(500).json({ message: "User information is missing" });
     }
 
     // Check if the product is already in favorites
-    if (req.user.favorites.includes(productId.toString())) {
+    const isProductInFavorites = user.favorites.some(
+      (fav) => fav.toString() === productId
+    );
+
+    if (isProductInFavorites) {
       return res
         .status(400)
         .json({ message: "Product is already in favorites" });
     }
 
     // Add the product to user's favorites
-    req.user.favorites.push(productId);
+    user.favorites.push(productId);
 
-    await req.user.save();
+    // Save the updated user document
+    await user.save();
 
     res.status(201).json({
       message: "Product added to favorites",
-      favorites: req.user.favorites,
+      favorites: user.favorites,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -129,16 +139,20 @@ router.get("/getFavorites", fetchuser, async (req, res) => {
     const userId = req.user.id;
 
     // Find the user with the specified ID and populate the 'favorites' array
-    const user = await User.findById(userId).populate("favorites.productId");
+    const user = await User.findById(userId).populate("favorites");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Extract the populated 'favorites' array from the user
-    const favoriteProducts = user.favorites.map(
-      (favorite) => favorite.productId
-    );
+    const favoriteProducts = user.favorites.map((favorite) => {
+      if (favorite && favorite.toString) {
+        return favorite.toString(); // Convert ObjectId to string
+      } else {
+        console.error("Undefined productId in favorites:", favorite);
+        return null;
+      }
+    });
 
     res.status(200).json(favoriteProducts);
   } catch (error) {
@@ -196,7 +210,8 @@ router.delete(
   async (req, res) => {
     try {
       const userId = req.user.id;
-      const productId = req.params.productId;
+      const { productId } = req.params.productId;
+      console.log("ProductId:", productId);
 
       // Find the user by ID
       const user = await User.findById(userId);
@@ -205,10 +220,9 @@ router.delete(
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check if the product is in favorites
-      const favoriteIndex = user.favorites.findIndex(
-        (fav) => fav.productId.toString() === productId
-      );
+      const favoriteIndex = user.favorites.findIndex((fav) => {
+        return fav.productId === productId;
+      });
 
       if (favoriteIndex === -1) {
         return res.status(400).json({ message: "Product is not in favorites" });
@@ -226,5 +240,36 @@ router.delete(
     }
   }
 );
+// router.delete(
+//   "/removeFromFavorites/:productId",
+//   fetchuser,
+//   async (req, res) => {
+//     try {
+//       const { productId } = req.params;
+
+//       const user = await User.findById(req.user.id);
+
+//       if (!user) {
+//         return res.status(404).json({ message: "User not found" });
+//       }
+
+//       // Filter out the item with the specified productId
+//       user.favorites = user.favorites.filter((item) => {
+//         item.productId !== productId;
+//         console.log("ITEM" + item.productId.toString());
+//         console.log("PRODUCT" + productId);
+//       });
+
+//       console.log(user.favorites);
+
+//       await user.save();
+
+//       res.status(200).json(user.favorites);
+//     } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ message: "Internal Server Error" });
+//     }
+//   }
+// );
 
 module.exports = router;
