@@ -4,18 +4,39 @@
  *   name: Product
  *   description: Product management operations
  */
-
 const express = require("express");
 const Product = require("../models/Product");
 const router = express.Router();
-
 const multer = require("multer");
+const mongoose = require("mongoose");
+const Grid = require("gridfs-stream");
+const { ObjectId } = require("mongoose").mongo;
+const cloudinary = require("cloudinary").v2;
+// import { v2 as cloudinary } from "cloudinary";
 
-let storage = multer.memoryStorage(); // Use memory storage to store image as Buffer
-
-let upload = multer({
-  storage: storage,
+cloudinary.config({
+  cloud_name: "dkmrmhwum",
+  api_key: "946847956626661",
+  api_secret: "e84bTJa7c9hpEVgIgRJDrDeI1RM",
 });
+
+// Function to upload image to Cloudinary
+const uploadToCloudinary = async (file) => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        { resource_type: "auto" }, // Use 'auto' to automatically determine the resource type (image, video, etc.)
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
+        }
+      )
+      .end(file.buffer);
+  });
+};
 
 // Route to create a new product
 
@@ -73,39 +94,124 @@ let upload = multer({
  *               message: "Internal Server Error"
  */
 
+// Create MongoDB connection
+const conn = mongoose.createConnection(
+  "mongodb+srv://alizadishah2:4XQ6riEEsTqENYlp@cluster0.bh9tzbc.mongodb.net/?retryWrites=true&w=majority"
+);
+
+let gfs;
+
+conn.once("open", () => {
+  gfs = new mongoose.mongo.GridFSBucket(conn.db);
+});
+
+const storage = multer.memoryStorage(); // Use memory storage to store the image as a buffer
+
+const upload = multer({ storage: storage });
+
+// Route to create a new product
 router.post("/addProduct", upload.single("image"), async (req, res) => {
   try {
-    // console.log("Request received:", req.file, req.body);
-    const { name, productType, description } = req.body;
-
+    const { name, productType, description, imageType } = req.body;
     const price = Number(req.body.price);
 
     if (isNaN(price)) {
       return res.status(400).json({ message: "Invalid price value." });
     }
 
-    if (!req.file || !name || !productType || !price || !description) {
+    if (!name || !productType || !price || !description || !imageType) {
       return res
         .status(400)
         .json({ message: "Please provide all required fields." });
     }
+    let imageUrl; // Variable to store the image URL or base64 string
 
-    // Access the image buffer from the request
-    const imageBuffer = req.file.buffer;
+    if (imageType === "base64") {
+      // Access the image buffer from the request and convert to base64
+      const imageBuffer = req.file.buffer;
 
-    const newProduct = new Product({
-      name,
-      productType,
-      price,
-      description,
-      image: imageBuffer.toString("base64"), // Convert the buffer to base64
-    });
+      // Check if the imageBuffer is present
+      if (!imageBuffer) {
+        console.error("Error: Image buffer is missing in req.file.");
+        return res.status(500).json({ message: "Internal Server Error" });
+      }
 
-    // Save the new product to the database
-    const savedProduct = await newProduct.save();
+      // Convert the imageBuffer to base64
+      const base64String = imageBuffer.toString("base64");
 
-    // Respond with the saved product data
-    res.status(201).json(savedProduct);
+      // Log the base64String content
+      console.log("Base64 String:", base64String);
+
+      // Generate the data URL
+      imageUrl = `data:${req.file.mimetype};base64,${base64String}`;
+
+      const newProduct = new Product({
+        name,
+        productType,
+        price,
+        description,
+        image: imageUrl,
+        imageType,
+      });
+
+      // Save the new product to the database
+      const savedProduct = await newProduct.save();
+
+      // Respond with the saved product data
+      res.status(201).json(savedProduct);
+    }
+    if (imageType === "cloudinary") {
+      try {
+        const cloudinaryUrl = await uploadToCloudinary(req.file);
+        imageUrl = cloudinaryUrl;
+      } catch (error) {
+        console.error("Error uploading to Cloudinary:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+      }
+
+      const newProduct = new Product({
+        name,
+        productType,
+        price,
+        description,
+        image: imageUrl,
+        imageType,
+      });
+
+      // Save the new product to the database
+      const savedProduct = await newProduct.save();
+
+      // Respond with the saved product data
+      res.status(201).json(savedProduct);
+    }
+    if (imageType === "gridfs") {
+      // Create a write stream with the filename
+      const writeStream = gfs.openUploadStream(req.file.originalname);
+
+      // Pipe the file buffer to the write stream
+      writeStream.end(req.file.buffer);
+
+      // Handle finish event
+      writeStream.on("finish", async () => {
+        // Set the image URL to the route that serves the image from GridFS
+        imageUrl = `/api/product/image/${req.file.originalname}`;
+
+        const newProduct = new Product({
+          name,
+          productType,
+          price,
+          description,
+          image: imageUrl,
+          imageType,
+        });
+
+        // Save the new product to the database
+        const savedProduct = await newProduct.save();
+
+        // Respond with the saved product data
+        res.status(201).json(savedProduct);
+      });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

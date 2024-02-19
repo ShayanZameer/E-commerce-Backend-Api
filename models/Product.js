@@ -6,14 +6,10 @@ const productSchema = new mongoose.Schema({
   productType: { type: String, required: true, index: true },
   price: { type: Number, required: true },
   description: { type: String, required: true },
-  reviews: { type: Array, default: [] },
 
-  favorites: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  ],
+  imageType: { type: String, enum: ["base64", "cloudinary", "gridfs"] },
+
+  reviews: { type: Array, default: [] },
 });
 
 const Product = mongoose.model("Product", productSchema);

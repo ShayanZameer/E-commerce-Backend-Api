@@ -8,12 +8,15 @@ const mongoURI =
 const connectToMongo = () => {
   try {
     mongoose.connect(mongoURI, {
+      // useNewUrlParser: true,
       family: 4,
     });
 
     console.log("connected to mongo db atlas");
   } catch (err) {
     console.log("error in connecting to mongo db atlas");
+
+    console.error(err);
   }
 };
 
