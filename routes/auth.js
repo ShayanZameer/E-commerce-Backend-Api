@@ -362,7 +362,7 @@ router.get("/Reset-Password", async (req, res) => {
       res.status(200).send({ success: true, msg: "LINK HAS EXPIRE " });
     }
   } catch (error) {
-    res.status(400).send({ success: false, msg: error.message });
+    res.status(400).send({ success: false, msg: "hhhhhh" });
   }
 });
 
