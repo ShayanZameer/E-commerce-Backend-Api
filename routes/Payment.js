@@ -15,4 +15,20 @@ router.post("/add", async (req, res) => {
   }
 });
 
+
+
+// Route to get the latest payment
+router.get("/retrieveLatest", async (req, res) => {
+    try {
+      const latestPayment = await Payment.findOne().sort({ createdAt: -1 }); // Sorting by the createdAt field in descending order
+      if (!latestPayment) {
+        return res.status(404).json({ message: "No payments found" });
+      }
+      res.json(latestPayment);
+    } catch (error) {
+      console.error("Error retrieving latest payment:", error);
+      res.status(500).json({ error: "Server error while retrieving latest payment" });
+    }
+  });
+
 module.exports = router;
