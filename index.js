@@ -32,6 +32,7 @@ app.use("/api/Favourites", require("./routes/Favourites"));
 app.use("/api/Order", require("./routes/Order"));
 app.use("/api/shippingAddress", require("./routes/shippingAddress"));
 app.use("/api/Review", require("./routes/Reviews"));
+app.use("/api/Payment", require("./routes/Payment"));
 
 app.get("/", (req, res) => {
   res.send("Backend Api is working Fine ");
