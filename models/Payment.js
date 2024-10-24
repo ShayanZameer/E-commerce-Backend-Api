@@ -1,13 +1,16 @@
 const mongoose = require("mongoose");
 
-const PaymentSchema = new mongoose.Schema({
-  paymentAmount: { // Using camelCase for JavaScript consistency
-    type: String,
-    required: true
+const PaymentSchema = new mongoose.Schema(
+  {
+    paymentAmount: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: true, // Automatically adds createdAt and updatedAt fields
   }
-}, {
-  timestamps: true // Automatically adds createdAt and updatedAt fields
-});
+);
 
 const Payment = mongoose.model("Payment", PaymentSchema);
 
